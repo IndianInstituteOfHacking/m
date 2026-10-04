@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RootBrowser — Download</title>
+<meta name="description" content="RootBrowser — a modern cross-platform web browser. Download for Linux and Windows.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%233cc47a'/><polygon points='40,30 72,50 40,70' fill='white'/></svg>">
+<style>
+  :root {
+    --bg: #0b0c10;
+    --bg2: #0e1014;
+    --surface: #13151b;
+    --surface2: #171a21;
+    --surface3: #1d2028;
+    --border: #242832;
+    --text: #e6e8ee;
+    --text-bright: #f7f8fb;
+    --muted: #8a90a0;
+    --faint: #565b69;
+    --accent: #5a8cd8;
+    --accent-hi: #74a3e8;
+    --green: #3cc47a;
+    --teal: #2ba9a0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Background glow ───────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(90, 140, 216, 0.10), transparent),
+      radial-gradient(ellipse 60% 40% at 50% 110%, rgba(60, 196, 122, 0.06), transparent);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; }
+
+  /* ── Header ────────────────────────────────────── */
+  header {
+    padding: 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text-bright);
+  }
+
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .brand-name {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .gh-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .gh-link:hover {
+    color: var(--text-bright);
+    border-color: var(--surface3);
+    background: var(--surface);
+  }
+
+  .gh-link svg { width: 15px; height: 15px; fill: currentColor; }
+
+  /* ── Hero ──────────────────────────────────────── */
+  main {
+    flex: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 32px 80px;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 60px 0 50px;
+  }
+
+  .hero-logo {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 26px;
+    display: block;
+    filter: drop-shadow(0 8px 32px rgba(60, 196, 122, 0.15));
+  }
+
+  h1 {
+    font-size: clamp(38px, 6vw, 56px);
+    font-weight: 200;
+    letter-spacing: -1.5px;
+    color: var(--text-bright);
+    margin-bottom: 14px;
+    line-height: 1.05;
+  }
+
+  .tagline {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 18px;
+    line-height: 1.65;
+  }
+
+  .version-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    background: rgba(19, 21, 27, 0.6);
+  }
+
+  /* ── Download cards ────────────────────────────── */
+  .downloads {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    max-width: 760px;
+    margin: 20px auto 0;
+  }
+
+  .card {
+    background: linear-gradient(160deg, var(--surface) 0%, var(--bg2) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 26px 24px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(90, 140, 216, 0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .card:hover {
+    border-color: var(--surface3);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 18px;
+    display: block;
+  }
+
+  .card-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-bright);
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .card-sub {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    width: 100%;
+    padding: 13px 20px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.18s ease;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: -0.1px;
+  }
+
+  .btn svg { width: 16px; height: 16px; }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hi);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(90, 140, 216, 0.3);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ── Info section ──────────────────────────────── */
+  .info {
+    max-width: 760px;
+    margin: 72px auto 0;
+    padding-top: 44px;
+    border-top: 1px solid var(--border);
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 32px;
+  }
+
+  .info-item h3 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 10px;
+  }
+
+  .info-item p {
+    font-size: 13.5px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .info-item code {
+    font-family: 'SF Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    color: var(--accent-hi);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Footer ────────────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 26px 32px;
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--faint);
+    position: relative;
+    z-index: 1;
+  }
+
+  footer a {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  footer a:hover { color: var(--accent-hi); }
+
+  /* ── Responsive ────────────────────────────────── */
+  @media (max-width: 640px) {
+    header { padding: 20px 20px; }
+    main { padding: 0 20px 60px; }
+    .hero { padding: 40px 0 36px; }
+    .hero-logo { width: 90px; height: 90px; }
+    .gh-link span { display: none; }
+    .gh-link { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="brand" href="#">
+    <svg class="brand-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3cc47a"/>
+          <stop offset="100%" stop-color="#2ba9a0"/>
+        </linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill="#0a1420" stroke="#1e2a38" stroke-width="2"/>
+      <ellipse cx="50" cy="50" rx="30" ry="46" fill="none" stroke="#2ba9a0" stroke-width="1.5" opacity="0.5"/>
+      <line x1="4" y1="50" x2="96" y2="50" stroke="#2ba9a0" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="50" cy="50" r="26" fill="#081018"/>
+      <path d="M40 32 L68 50 L40 68 L40 56 L54 50 L40 44 Z" fill="url(#g1)"/>
+    </svg>
+    <span class="brand-name">RootBrowser</span>
+  </a>
+  <a class="gh-link" href="https://github.com/IndianInstituteOfHacking/m" target="_blank" rel="noopener">
+    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+    <span>GitHub</span>
+  </a>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <svg class="hero-logo" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0e1a26"/>
+          <stop offset="100%" stop-color="#0a1420"/>
+        </linearGradient>
+        <linearGradient id="playGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#3cc47a"/>
+          <stop offset="100%" stop-color="#2ba9a0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Outer rounded square -->
+      <rect x="4" y="4" width="192" height="192" rx="42" fill="url(#bgGrad)" stroke="#18293a" stroke-width="2"/>
+
+      <!-- Globe grid -->
+      <g stroke="#1e2a38" stroke-width="1.5" fill="none">
+        <circle cx="100" cy="100" r="62"/>
+        <line x1="38" y1="100" x2="162" y2="100"/>
+        <line x1="43" y1="72" x2="157" y2="72"/>
+        <line x1="43" y1="128" x2="157" y2="128"/>
+        <ellipse cx="100" cy="100" rx="22" ry="62"/>
+        <ellipse cx="100" cy="100" rx="48" ry="62"/>
+      </g>
+
+      <!-- Inner disc -->
+      <circle cx="100" cy="100" r="42" fill="#081018" stroke="#1a2a38" stroke-width="1.5"/>
+
+      <!-- Play button -->
+      <path d="M86 78 L122 100 L86 122 L86 108 L102 100 L86 92 Z" fill="url(#playGrad)"/>
+
+      <!-- Arc accents -->
+      <path d="M 138 40 A 76 76 0 0 1 176 84" stroke="#2ba9a0" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M 62 160 A 76 76 0 0 1 24 116" stroke="#2ba9a0" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+      <!-- Dots -->
+      <circle cx="100" cy="24" r="6" fill="#3cc47a"/>
+      <circle cx="24" cy="100" r="4.5" fill="#4db8d8"/>
+      <circle cx="176" cy="100" r="4.5" fill="#4db8d8"/>
+    </svg>
+
+    <h1>RootBrowser</h1>
+    <p class="tagline">
+      A modern, cross-platform web browser built with Qt6 and Chromium.
+      Fast, minimal, and open source.
+    </p>
+    <span class="version-pill">Version 1.0.0</span>
+  </section>
+
+  <section class="downloads">
+
+    <!-- Linux Card -->
+    <div class="card">
+      <svg class="card-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <!-- Tux simplified -->
+        <ellipse cx="32" cy="40" rx="18" ry="20" fill="#15161a"/>
+        <ellipse cx="32" cy="44" rx="12" ry="14" fill="#f0f0e9"/>
+        <circle cx="26" cy="22" r="5" fill="#fff"/>
+        <circle cx="38" cy="22" r="5" fill="#fff"/>
+        <circle cx="26.5" cy="23" r="2.4" fill="#0a0a0a"/>
+        <circle cx="38.5" cy="23" r="2.4" fill="#0a0a0a"/>
+        <path d="M28 28 L32 34 L36 28 Z" fill="#dc8618"/>
+        <ellipse cx="22" cy="54" rx="7" ry="4" fill="#e8a028"/>
+        <ellipse cx="42" cy="54" rx="7" ry="4" fill="#e8a028"/>
+      </svg>
+      <div class="card-title">Linux</div>
+      <div class="card-sub">Ubuntu · Debian · Fedora · Arch<br>AppImage · no install needed</div>
+      <a class="btn btn-primary"
+         href="https://nightly.link/IndianInstituteOfHacking/m/actions/runs/37196566868/RootBrowser-Installer-Linux.zip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download for Linux
+      </a>
+    </div>
+
+    <!-- Windows Card -->
+    <div class="card">
+      <svg class="card-icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="w1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#4b9cd8"/><stop offset="1" stop-color="#3b8acc"/>
+          </linearGradient>
+          <linearGradient id="w2" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#4596d4"/><stop offset="1" stop-color="#3584c6"/>
+          </linearGradient>
+          <linearGradient id="w3" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3d8ecb"/><stop offset="1" stop-color="#2f7ebf"/>
+          </linearGradient>
+          <linearGradient id="w4" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3989c7"/><stop offset="1" stop-color="#2b78b8"/>
+          </linearGradient>
+        </defs>
+        <rect x="6"  y="6"  width="24" height="24" rx="2" fill="url(#w1)"/>
+        <rect x="34" y="6"  width="24" height="24" rx="2" fill="url(#w2)"/>
+        <rect x="6"  y="34" width="24" height="24" rx="2" fill="url(#w3)"/>
+        <rect x="34" y="34" width="24" height="24" rx="2" fill="url(#w4)"/>
+      </svg>
+      <div class="card-title">Windows</div>
+      <div class="card-sub">Windows 10 · 11 (64-bit)<br>Portable ZIP · just extract and run</div>
+      <a class="btn btn-primary"
+         href="https://nightly.link/IndianInstituteOfHacking/m/actions/runs/37196722928/RootBrowser-Installer-Windows.zip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download for Windows
+      </a>
+    </div>
+
+  </section>
+
+  <!-- Info -->
+  <section class="info">
+    <div class="info-grid">
+
+      <div class="info-item">
+        <h3>Linux</h3>
+        <p>
+          Extract the ZIP and run <code>chmod +x</code> then <code>./RootBrowser</code>.
+          No installation required.
+        </p>
+      </div>
+
+      <div class="info-item">
+        <h3>Windows</h3>
+        <p>
+          Extract the ZIP and double-click <code>rootbrowser-installer.exe</code>.
+          Everything is bundled — no setup needed.
+        </p>
+      </div>
+
+      <div class="info-item">
+        <h3>Open Source</h3>
+        <p>
+          Source code is available on
+          <a href="https://github.com/IndianInstituteOfHacking/m" target="_blank" rel="noopener"
+             style="color:var(--accent-hi);text-decoration:none;">GitHub</a>.
+          Built with Qt6 and Chromium.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  RootBrowser · Built with Qt6 &amp; Chromium ·
+  <a href="https://github.com/IndianInstituteOfHacking/m" target="_blank" rel="noopener">GitHub</a>
+</footer>
+
+</body>
+</html>
