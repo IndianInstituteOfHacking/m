@@ -26,7 +26,8 @@ jobs:
             build-essential pkg-config \
             libgl1-mesa-dev libxkbcommon-dev libxcb-* \
             libfontconfig1-dev libfreetype6-dev \
-            librsvg2-bin imagemagick wget file libfuse2
+            librsvg2-bin imagemagick fonts-dejavu-core \
+            wget file libfuse2
 
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
@@ -37,26 +38,16 @@ jobs:
           arch: 'linux_gcc_64'
           cache: true
 
-      - name: Debug — check Qt path
-        run: |
-          echo "QT_ROOT_DIR=$QT_ROOT_DIR"
-          ls -la "$QT_ROOT_DIR/bin/qmake" || true
-          pkg-config --modversion Qt6Widgets || echo "pkg-config won't find Qt6, using -I/-L fallback"
-
       - name: Compile main.cpp
         run: |
           set -e
-          echo "=== Files in repo ==="
           ls -la
-          echo "=== Compiling main.cpp ==="
-
-          # Try pkg-config first
           if pkg-config --exists Qt6Widgets 2>/dev/null; then
             echo "Using pkg-config"
             g++ -std=c++17 -O2 -fPIC main.cpp -o rootbrowser-installer \
               $(pkg-config --cflags --libs Qt6Widgets)
           else
-            echo "Using explicit Qt paths from install-qt-action"
+            echo "Using explicit Qt paths"
             g++ -std=c++17 -O2 -fPIC main.cpp -o rootbrowser-installer \
               -I"$QT_ROOT_DIR/include" \
               -I"$QT_ROOT_DIR/include/QtWidgets" \
@@ -65,8 +56,6 @@ jobs:
               -L"$QT_ROOT_DIR/lib" \
               -lQt6Widgets -lQt6Gui -lQt6Core
           fi
-
-          echo "=== Build done ==="
           ls -la rootbrowser-installer
           file rootbrowser-installer
 
@@ -86,10 +75,15 @@ jobs:
           Terminal=false
           EOF
 
-          # Simple placeholder icon
+          # Placeholder icon — font explicitly specified
           convert -size 256x256 xc:'#4f83e0' \
-            -fill white -gravity center -pointsize 120 -annotate +0+0 'R' \
+            -font DejaVu-Sans -fill white -gravity center \
+            -pointsize 140 -annotate +0+0 'R' \
             AppDir/rootbrowser-installer.png
+
+          # Verify icon
+          file AppDir/rootbrowser-installer.png
+          ls -la AppDir/
 
       - name: Download linuxdeploy
         run: |
@@ -140,18 +134,10 @@ jobs:
         with:
           arch: x64
 
-      - name: Debug — Qt + compiler
-        shell: cmd
-        run: |
-          echo QT_ROOT_DIR=%QT_ROOT_DIR%
-          dir "%QT_ROOT_DIR%\include" | findstr /I "QtWidgets"
-          where cl
-          cl 2>&1 | findstr /I version
-
       - name: Compile main.cpp
         shell: cmd
         run: |
-          cl /nologo /std:c++17 /EHsc /O2 /MD /W3 ^
+          cl /nologo /std:c++17 /Zc:__cplusplus /permissive- /EHsc /O2 /MD /W3 ^
             /DUNICODE /D_UNICODE ^
             /I"%QT_ROOT_DIR%\include" ^
             /I"%QT_ROOT_DIR%\include\QtWidgets" ^
@@ -162,6 +148,7 @@ jobs:
             /link ^
             /LIBPATH:"%QT_ROOT_DIR%\lib" ^
             Qt6Widgets.lib Qt6Gui.lib Qt6Core.lib ^
+            Qt6EntryPoint.lib ^
             /SUBSYSTEM:WINDOWS
 
       - name: Verify exe
@@ -187,7 +174,6 @@ jobs:
           }
           $items += (Get-ChildItem -Filter *.dll | Select-Object -ExpandProperty Name)
           Compress-Archive -Path $items -DestinationPath RootBrowser-Installer-Windows.zip -Force
-          Get-ChildItem
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
