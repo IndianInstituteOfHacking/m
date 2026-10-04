@@ -9,7 +9,7 @@ on:
 
 jobs:
   # ==========================================================================
-  # LINUX — AppImage build
+  # LINUX — AppImage
   # ==========================================================================
   build-linux:
     name: Linux Installer (AppImage)
@@ -23,10 +23,10 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake ninja-build pkg-config \
+            build-essential pkg-config \
             libgl1-mesa-dev libxkbcommon-dev libxcb-* \
             libfontconfig1-dev libfreetype6-dev \
-            librsvg2-bin imagemagick wget file fuse libfuse2
+            librsvg2-bin imagemagick wget file libfuse2
 
       - name: Install Qt6
         uses: jurplel/install-qt-action@v4
@@ -35,24 +35,47 @@ jobs:
           host: 'linux'
           target: 'desktop'
           arch: 'linux_gcc_64'
-          modules: 'qtwebengine'
           cache: true
 
-      - name: Compile installer.cpp
+      - name: Debug — check Qt path
         run: |
-          g++ -std=c++17 -O2 -fPIC installer.cpp -o rootbrowser-installer \
-            $(pkg-config --cflags --libs Qt6Widgets)
+          echo "QT_ROOT_DIR=$QT_ROOT_DIR"
+          ls -la "$QT_ROOT_DIR/bin/qmake" || true
+          pkg-config --modversion Qt6Widgets || echo "pkg-config won't find Qt6, using -I/-L fallback"
+
+      - name: Compile main.cpp
+        run: |
+          set -e
+          echo "=== Files in repo ==="
+          ls -la
+          echo "=== Compiling main.cpp ==="
+
+          # Try pkg-config first
+          if pkg-config --exists Qt6Widgets 2>/dev/null; then
+            echo "Using pkg-config"
+            g++ -std=c++17 -O2 -fPIC main.cpp -o rootbrowser-installer \
+              $(pkg-config --cflags --libs Qt6Widgets)
+          else
+            echo "Using explicit Qt paths from install-qt-action"
+            g++ -std=c++17 -O2 -fPIC main.cpp -o rootbrowser-installer \
+              -I"$QT_ROOT_DIR/include" \
+              -I"$QT_ROOT_DIR/include/QtWidgets" \
+              -I"$QT_ROOT_DIR/include/QtGui" \
+              -I"$QT_ROOT_DIR/include/QtCore" \
+              -L"$QT_ROOT_DIR/lib" \
+              -lQt6Widgets -lQt6Gui -lQt6Core
+          fi
+
+          echo "=== Build done ==="
+          ls -la rootbrowser-installer
+          file rootbrowser-installer
 
       - name: Prepare AppDir
         run: |
           mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-
           cp rootbrowser-installer AppDir/usr/bin/
           chmod +x AppDir/usr/bin/rootbrowser-installer
 
-          # Desktop entry
           cat > AppDir/rootbrowser-installer.desktop << 'EOF'
           [Desktop Entry]
           Type=Application
@@ -63,12 +86,10 @@ jobs:
           Terminal=false
           EOF
 
-          # Icon (simple placeholder — apna icon daal sakte ho)
+          # Simple placeholder icon
           convert -size 256x256 xc:'#4f83e0' \
             -fill white -gravity center -pointsize 120 -annotate +0+0 'R' \
             AppDir/rootbrowser-installer.png
-          cp AppDir/rootbrowser-installer.png \
-             AppDir/usr/share/icons/hicolor/256x256/apps/
 
       - name: Download linuxdeploy
         run: |
@@ -85,16 +106,17 @@ jobs:
             --appdir AppDir \
             --plugin qt \
             --output appimage
+          ls -la *.AppImage
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
         with:
           name: RootBrowser-Installer-Linux
-          path: RootBrowser-Installer-x86_64.AppImage
+          path: '*.AppImage'
           if-no-files-found: error
 
   # ==========================================================================
-  # WINDOWS — .exe build
+  # WINDOWS — .exe
   # ==========================================================================
   build-windows:
     name: Windows Installer (.exe)
@@ -111,44 +133,61 @@ jobs:
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2022_64'
-          modules: 'qtwebengine'
           cache: true
-          tools: 'tools_opensslv3_x64'
 
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
-      - name: Compile installer.cpp
+      - name: Debug — Qt + compiler
         shell: cmd
         run: |
-          cl /nologo /std:c++17 /EHsc /O2 /MD ^
+          echo QT_ROOT_DIR=%QT_ROOT_DIR%
+          dir "%QT_ROOT_DIR%\include" | findstr /I "QtWidgets"
+          where cl
+          cl 2>&1 | findstr /I version
+
+      - name: Compile main.cpp
+        shell: cmd
+        run: |
+          cl /nologo /std:c++17 /EHsc /O2 /MD /W3 ^
+            /DUNICODE /D_UNICODE ^
             /I"%QT_ROOT_DIR%\include" ^
             /I"%QT_ROOT_DIR%\include\QtWidgets" ^
             /I"%QT_ROOT_DIR%\include\QtGui" ^
             /I"%QT_ROOT_DIR%\include\QtCore" ^
-            installer.cpp ^
+            main.cpp ^
             /Fe:rootbrowser-installer.exe ^
-            /link /LIBPATH:"%QT_ROOT_DIR%\lib" ^
+            /link ^
+            /LIBPATH:"%QT_ROOT_DIR%\lib" ^
             Qt6Widgets.lib Qt6Gui.lib Qt6Core.lib ^
             /SUBSYSTEM:WINDOWS
+
+      - name: Verify exe
+        shell: cmd
+        run: |
+          dir rootbrowser-installer.exe
+          if not exist rootbrowser-installer.exe (echo BUILD FAILED & exit /b 1)
 
       - name: Deploy Qt DLLs
         shell: cmd
         run: |
           "%QT_ROOT_DIR%\bin\windeployqt.exe" ^
             --release --no-translations --no-system-d3d-compiler ^
-            --no-opengl-sw ^
+            --no-opengl-sw --no-compiler-runtime ^
             rootbrowser-installer.exe
 
       - name: Create ZIP bundle
         shell: pwsh
         run: |
-          Compress-Archive -Path rootbrowser-installer.exe, `
-            *.dll, platforms, imageformats, styles, tls, `
-            -DestinationPath RootBrowser-Installer-Windows.zip `
-            -Force
+          $items = @('rootbrowser-installer.exe')
+          foreach ($d in 'platforms','imageformats','styles','tls','networkinformation','resources') {
+            if (Test-Path $d) { $items += $d }
+          }
+          $items += (Get-ChildItem -Filter *.dll | Select-Object -ExpandProperty Name)
+          Compress-Archive -Path $items -DestinationPath RootBrowser-Installer-Windows.zip -Force
+          Get-ChildItem
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
